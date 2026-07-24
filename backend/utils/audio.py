@@ -89,12 +89,44 @@ def save_audio(
 
     temp_path = f"{path}.tmp"
     try:
+        # Normalize audio into the sample-first layout expected by
+        # soundfile: (samples,) for mono or (samples, channels).
+        audio = np.asarray(audio)
+
+        # Remove harmless singleton dimensions introduced by some
+        # synthesis engines.
+        if audio.ndim > 2:
+            audio = np.squeeze(audio)
+
+        # Kokoro and some PyTorch models return channels-first audio,
+        # such as (1, samples) or (2, samples). Convert that to
+        # soundfile's required sample-first representation.
+        if (
+            audio.ndim == 2
+            and audio.shape[0] <= 8
+            and audio.shape[1] > audio.shape[0]
+        ):
+            audio = audio.T
+
+        if audio.ndim not in (1, 2):
+            raise ValueError(
+                f"Unsupported audio shape for WAV output: {audio.shape}"
+            )
+
+        audio = np.ascontiguousarray(audio)
+
         # Ensure parent directory exists
         Path(path).parent.mkdir(parents=True, exist_ok=True)
 
+        # Diagnostic probe: write the same audio directly to a normal
+        # WAV filename in the same directory before testing temp_path.
+        probe_path = str(Path(path).parent / "probe.wav")
+        sf.write(probe_path, audio, sample_rate, format="WAV")
+        print("Probe write succeeded", flush=True)
+
         # Write to temporary file first (explicit format since .tmp
         # extension is not recognised by soundfile)
-        sf.write(temp_path, audio, sample_rate, format='WAV')
+        sf.write(temp_path, audio, sample_rate, format="WAV")
 
         # Atomic rename to final path
         os.replace(temp_path, path)
