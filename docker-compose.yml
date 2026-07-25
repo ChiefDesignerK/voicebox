@@ -28,6 +28,7 @@ services:
     environment:
       - LOG_LEVEL=info
       - NUMBA_CACHE_DIR=/tmp/numba_cache
+      - KOKORO_SPEED=1.08
       - VOICEBOX_MODELS_DIR=/app/data/models
       - HF_HOME=/app/data/models/huggingface
       - HF_HUB_CACHE=/app/data/models/huggingface/hub

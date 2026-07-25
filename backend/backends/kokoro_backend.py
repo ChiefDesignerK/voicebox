@@ -38,6 +38,34 @@ KOKORO_SAMPLE_RATE = 24000
 # Default voice if none specified
 KOKORO_DEFAULT_VOICE = "af_heart"
 
+
+def _get_kokoro_speed() -> float:
+    """Return the configured Kokoro speech speed.
+
+    The supported operational range is intentionally conservative.
+    Invalid values fall back to the upstream default rather than
+    preventing the backend from starting.
+    """
+    raw_value = os.getenv("KOKORO_SPEED", "1.0")
+
+    try:
+        speed = float(raw_value)
+    except ValueError:
+        logger.warning(
+            "Invalid KOKORO_SPEED=%r; using 1.0",
+            raw_value,
+        )
+        return 1.0
+
+    if not 0.5 <= speed <= 2.0:
+        logger.warning(
+            "KOKORO_SPEED=%s is outside 0.5-2.0; using 1.0",
+            speed,
+        )
+        return 1.0
+
+    return speed
+
 # All available Kokoro voices: (voice_id, display_name, gender, lang_code)
 KOKORO_VOICES = [
     # American English female
@@ -273,10 +301,15 @@ class KokoroTTSBackend:
                     torch.cuda.manual_seed(seed)
 
             pipeline = self._get_pipeline(language)
+            speed = _get_kokoro_speed()
 
             # Generate all chunks and concatenate
             audio_chunks = []
-            for result in pipeline(text, voice=voice_name, speed=1.0):
+            for result in pipeline(
+                text,
+                voice=voice_name,
+                speed=speed,
+            ):
                 if result.audio is not None:
                     chunk = result.audio
                     if isinstance(chunk, torch.Tensor):
