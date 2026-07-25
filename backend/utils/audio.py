@@ -118,12 +118,6 @@ def save_audio(
         # Ensure parent directory exists
         Path(path).parent.mkdir(parents=True, exist_ok=True)
 
-        # Diagnostic probe: write the same audio directly to a normal
-        # WAV filename in the same directory before testing temp_path.
-        probe_path = str(Path(path).parent / "probe.wav")
-        sf.write(probe_path, audio, sample_rate, format="WAV")
-        print("Probe write succeeded", flush=True)
-
         # Write to temporary file first (explicit format since .tmp
         # extension is not recognised by soundfile)
         sf.write(temp_path, audio, sample_rate, format="WAV")
